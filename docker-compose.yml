@@ -1,0 +1,27 @@
+services:
+
+  # ── Backend: FastAPI ──────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend        # Dockerfile location
+      dockerfile: Dockerfile
+    container_name: healthcare_backend
+    ports:
+      - "8000:8000"             # host:container
+    volumes:
+      - ./backend:/app          # live reload in dev (mounts source code)
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  # ── Frontend: React + Nginx ───────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: healthcare_frontend
+    ports:
+      - "80:80"                 # serve on localhost:80
+    depends_on:
+      - backend                 # wait for backend to start first
+    restart: unless-stopped
