@@ -3,6 +3,7 @@ import { CalendarDays, XCircle } from 'lucide-react'
 import * as api from '../../api'
 import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
+import ConfirmDialog, { useConfirm } from '../../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function MyAppointmentsPage() {
@@ -10,23 +11,34 @@ export default function MyAppointmentsPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState('all')
   const [cancelling, setCancelling] = useState(null)
+  const { confirmProps, requestConfirm } = useConfirm()
 
   const load = () => api.getPatientHistory().then(setAppts).finally(() => setLoading(false))
   useEffect(() => { load() }, [])
 
   const handleCancel = async (id) => {
-    if (!confirm('Cancel this appointment?')) return
+    const ok = await requestConfirm({
+      title: 'Cancel Appointment?',
+      message: 'Are you sure you want to cancel this appointment? This action cannot be undone.',
+    })
+    if (!ok) return
     setCancelling(id)
-    try { await api.cancelAppointment(id); toast.success('Appointment cancelled'); load() }
-    catch (err) { toast.error(err?.detail || 'Cannot cancel') }
-    finally { setCancelling(null) }
+    try {
+      await api.cancelAppointment(id)
+      toast.success('Appointment cancelled')
+      load()
+    } catch (err) {
+      toast.error(err?.detail || 'Cannot cancel appointment')
+    } finally {
+      setCancelling(null)
+    }
   }
 
   const filtered = appts.filter(a => filter === 'all' || a.status === filter)
 
   const tabs = [
-    { key: 'all', label: 'All' },
-    { key: 'booked', label: 'Upcoming' },
+    { key: 'all',       label: 'All' },
+    { key: 'booked',    label: 'Upcoming' },
     { key: 'completed', label: 'Completed' },
     { key: 'cancelled', label: 'Cancelled' },
   ]
@@ -35,12 +47,14 @@ export default function MyAppointmentsPage() {
 
   return (
     <div className="space-y-6 animate-slide-up">
+      <ConfirmDialog {...confirmProps} confirmText="Yes, Cancel It" confirmClass="btn-danger" />
+
       <div>
         <h1 className="text-2xl font-bold text-white">My Appointments</h1>
         <p className="text-slate-400 text-sm mt-1">Track all your scheduled and past consultations</p>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {tabs.map(t => (
           <button key={t.key} onClick={() => setFilter(t.key)} id={`tab-${t.key}`}
             className={`btn btn-sm ${filter === t.key ? 'btn-primary' : 'btn-secondary'}`}>

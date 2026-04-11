@@ -3,5 +3,5 @@ uvicorn[standard]
 sqlalchemy
 pydantic[email]
 PyJWT
-passlib[bcrypt]
+bcrypt
 python-multipart

@@ -318,9 +318,23 @@ def delete_doctor(doctor_id: int, db: Session = Depends(get_db),
     doctor = db.query(models.Doctor).filter(models.Doctor.id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
+    user_id = doctor.user_id
+    # Cascade: delete prescriptions linked to this doctor's appointments first
+    appts = db.query(models.Appointment).filter(models.Appointment.doctor_id == doctor_id).all()
+    for appt in appts:
+        if appt.prescription:
+            db.delete(appt.prescription)
+    db.flush()
+    # Delete the doctor (cascades schedules & appointments via ORM cascade)
     db.delete(doctor)
+    db.flush()
+    # Also remove the associated user account
+    doc_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if doc_user:
+        db.delete(doc_user)
     db.commit()
     return {"msg": "Doctor removed"}
+
 
 
 # ─── Schedules ─────────────────────────────────────────────────────────────────

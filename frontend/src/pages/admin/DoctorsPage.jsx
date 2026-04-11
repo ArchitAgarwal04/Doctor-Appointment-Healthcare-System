@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Stethoscope } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import * as api from '../../api'
 import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
+import ConfirmDialog, { useConfirm } from '../../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function AdminDoctorsPage() {
@@ -13,11 +14,16 @@ export default function AdminDoctorsPage() {
   const [selected, setSelected] = useState(null)
   const [saving, setSaving]     = useState(false)
   const [form, setForm] = useState({ name: '', email: '', password: '', specialization: '', department_id: '', bio: '' })
+  const { confirmProps, requestConfirm } = useConfirm()
 
   const load = async () => {
-    const [d, deps] = await Promise.all([api.getDoctors(), api.getDepartments()])
-    setDoctors(d); setDepts(deps)
-    setLoading(false)
+    try {
+      const [d, deps] = await Promise.all([api.getDoctors(), api.getDepartments()])
+      setDoctors(d)
+      setDepts(deps)
+    } finally {
+      setLoading(false)
+    }
   }
   useEffect(() => { load() }, [])
 
@@ -42,10 +48,19 @@ export default function AdminDoctorsPage() {
     finally { setSaving(false) }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Remove this doctor?')) return
-    try { await api.deleteDoctor(id); toast.success('Doctor removed'); load() }
-    catch (err) { toast.error(err?.detail || 'Failed to delete') }
+  const handleDelete = async (id, name) => {
+    const ok = await requestConfirm({
+      title: 'Remove Doctor?',
+      message: `Are you sure you want to remove Dr. ${name}? Their account and all associated data will be deleted.`,
+    })
+    if (!ok) return
+    try {
+      await api.deleteDoctor(id)
+      toast.success('Doctor removed')
+      load()
+    } catch (err) {
+      toast.error(err?.detail || 'Failed to delete doctor')
+    }
   }
 
   const handle = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
@@ -54,6 +69,8 @@ export default function AdminDoctorsPage() {
 
   return (
     <div className="space-y-6 animate-slide-up">
+      <ConfirmDialog {...confirmProps} confirmText="Remove Doctor" confirmClass="btn-danger" />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Doctors</h1>
@@ -93,7 +110,7 @@ export default function AdminDoctorsPage() {
                   <td className="table-cell">
                     <div className="flex gap-1">
                       <button onClick={() => openEdit(d)} className="btn-ghost btn-sm" id={`edit-doc-${d.id}`}><Pencil size={14} /></button>
-                      <button onClick={() => handleDelete(d.id)} className="btn-ghost btn-sm text-rose-400 hover:bg-rose-500/10" id={`del-doc-${d.id}`}><Trash2 size={14} /></button>
+                      <button onClick={() => handleDelete(d.id, d.name)} className="btn-ghost btn-sm text-rose-400 hover:bg-rose-500/10" id={`del-doc-${d.id}`}><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>

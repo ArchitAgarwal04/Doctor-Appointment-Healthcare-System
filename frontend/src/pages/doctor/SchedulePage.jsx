@@ -3,6 +3,7 @@ import { Plus, Trash2, CalendarDays, Clock } from 'lucide-react'
 import * as api from '../../api'
 import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
+import ConfirmDialog, { useConfirm } from '../../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 import { format, parseISO } from 'date-fns'
 
@@ -14,6 +15,7 @@ export default function SchedulePage() {
   const [modal, setModal]         = useState(false)
   const [saving, setSaving]       = useState(false)
   const [form, setForm] = useState({ date: '', time_slot: TIME_SLOTS[1] })
+  const { confirmProps, requestConfirm } = useConfirm()
 
   const load = () => api.getMySchedules().then(setSchedules).finally(() => setLoading(false))
   useEffect(() => { load() }, [])
@@ -29,10 +31,19 @@ export default function SchedulePage() {
     finally { setSaving(false) }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Remove this schedule slot?')) return
-    try { await api.deleteSchedule(id); toast.success('Slot removed'); load() }
-    catch (err) { toast.error(err?.detail || 'Failed') }
+  const handleDelete = async (id, timeSlot, date) => {
+    const ok = await requestConfirm({
+      title: 'Remove Schedule Slot?',
+      message: `Remove the ${timeSlot} slot on ${date}? Any booked appointments for this slot may be affected.`,
+    })
+    if (!ok) return
+    try {
+      await api.deleteSchedule(id)
+      toast.success('Slot removed')
+      load()
+    } catch (err) {
+      toast.error(err?.detail || 'Failed to remove slot')
+    }
   }
 
   // Group schedules by date
@@ -44,6 +55,8 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-6 animate-slide-up">
+      <ConfirmDialog {...confirmProps} confirmText="Remove Slot" confirmClass="btn-danger" />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">My Schedule</h1>
@@ -77,8 +90,10 @@ export default function SchedulePage() {
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-600/15 border border-brand-500/30 text-brand-300 text-sm group">
                     <Clock size={13} />
                     <span>{s.time_slot}</span>
-                    <button onClick={() => handleDelete(s.id)}
+                    <button
+                      onClick={() => handleDelete(s.id, s.time_slot, date)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-400 hover:text-rose-300 ml-1"
+                      title="Remove this slot"
                       id={`del-slot-${s.id}`}>
                       <Trash2 size={12} />
                     </button>

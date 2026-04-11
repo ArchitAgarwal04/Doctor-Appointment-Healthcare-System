@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Building2 } from 'lucide-react'
 import * as api from '../../api'
 import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
+import ConfirmDialog, { useConfirm } from '../../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function DepartmentsPage() {
@@ -12,6 +13,7 @@ export default function DepartmentsPage() {
   const [selected, setSelected] = useState(null)
   const [form, setForm]     = useState({ name: '', description: '' })
   const [saving, setSaving] = useState(false)
+  const { confirmProps, requestConfirm } = useConfirm()
 
   const load = () => api.getDepartments().then(setDepts).finally(() => setLoading(false))
   useEffect(() => { load() }, [])
@@ -40,8 +42,12 @@ export default function DepartmentsPage() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this department?')) return
+  const handleDelete = async (id, name) => {
+    const ok = await requestConfirm({
+      title: 'Delete Department?',
+      message: `Are you sure you want to delete "${name}"? This cannot be undone.`,
+    })
+    if (!ok) return
     try {
       await api.deleteDepartment(id)
       toast.success('Department deleted')
@@ -55,6 +61,8 @@ export default function DepartmentsPage() {
 
   return (
     <div className="space-y-6 animate-slide-up">
+      <ConfirmDialog {...confirmProps} confirmText="Delete" confirmClass="btn-danger" />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Departments</h1>
@@ -76,7 +84,7 @@ export default function DepartmentsPage() {
                 <button onClick={() => openEdit(d)} className="btn-ghost btn-sm p-1.5" id={`edit-dept-${d.id}`}>
                   <Pencil size={14} />
                 </button>
-                <button onClick={() => handleDelete(d.id)} className="btn-ghost btn-sm p-1.5 text-rose-400 hover:bg-rose-500/10" id={`del-dept-${d.id}`}>
+                <button onClick={() => handleDelete(d.id, d.name)} className="btn-ghost btn-sm p-1.5 text-rose-400 hover:bg-rose-500/10" id={`del-dept-${d.id}`}>
                   <Trash2 size={14} />
                 </button>
               </div>

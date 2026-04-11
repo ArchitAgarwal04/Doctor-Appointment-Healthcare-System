@@ -34,8 +34,8 @@ class Doctor(Base):
 
     user = relationship("User", back_populates="doctor_profile")
     department = relationship("Department", back_populates="doctors")
-    schedules = relationship("DoctorSchedule", back_populates="doctor")
-    appointments = relationship("Appointment", back_populates="doctor")
+    schedules = relationship("DoctorSchedule", back_populates="doctor", cascade="all, delete-orphan", passive_deletes=True)
+    appointments = relationship("Appointment", back_populates="doctor", cascade="all, delete-orphan", passive_deletes=True)
 
 class DoctorSchedule(Base):
     __tablename__ = "doctor_schedule"
