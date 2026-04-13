@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000'
+const BASE_URL = 'https://doctor-backend-ebegeve4bycecuhs.centralindia-01.azurewebsites.net'
 
 function getToken() {
   return localStorage.getItem('token')
